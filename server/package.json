@@ -10,7 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "jsonwebtoken": "^9.0.1",
     "socket.io": "^4.7.1",
-    "websocket": "^1.0.34"
+    "websocket": "^1.0.34",
+    "ws": "^8.13.0"
   }
 }
