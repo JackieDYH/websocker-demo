@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>小贱贱的多人聊天</title>
+    <style>
+        .all {
+            width: 400px;
+            height: 500px;
+            border: 1px dotted grey;
+            float: left;
+            margin-left: 20px;
+        }
+
+        .person {
+            width: 400px;
+            height: 50px;
+            line-height: 50px;
+            text-align: center;
+        }
+
+        .contain {
+            width: 400px;
+            height: 350px;
+        }
+
+        #content {
+            width: 99%;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .footer {
+            width: 100%;
+            height: 100px;
+            border: 1px solid green;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .footer input {
+            width: 70px;
+            height: 50px;
+            float: left;
+            margin-right: 5px;
+            margin-left: 5px;
+            border-radius: 5%;
+        }
+
+        .footer button {
+            width: 50px;
+            height: 50px;
+            float: left;
+            background-color: deepskyblue;
+            border-radius: 10%;
+            margin-right: 5px;
+        }
+
+        .footer textarea {
+            width: 200px;
+            height: 80px;
+            overflow-y: scroll;
+            float: left;
+            margin-right: 5px;
+            border-radius: 5%;
+        }
+
+        /*在线用户的列表*/
+        .all2 {
+            width: 150px;
+            height: 500px;
+            border: 1px dotted green;
+            float: left;
+        }
+
+        .title {
+            width: 150px;
+            height: 50px;
+            line-height: 50px;
+            background-color: bisque;
+        }
+
+        .userList {
+            overflow-y: scroll;
+            height: 450px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="all">
+        <div class='person'><text id="onLine">在线人数</text></div>
+        <div class="contain">
+            <div class="content" id="content"></div>
+        </div>
+        <div class="footer">
+            <input placeholder="设置用户名." name="userName" id="userName" />
+            <button id="setName">设置</button>
+            <textarea placeholder="输入您要发送的消息" id="message" name="message"></textarea>
+            <button id="sendMessage">发送</button>
+        </div>
+    </div>
+
+    <div class="all2">
+        <div class="title"><text>在线用户列表:</text></div>
+        <div id="userList" class="userList">
+
+        </div>
+    </div>
+    <script type="text/javascript" language="JavaScript">
+        //定义全局的变量
+        let ws = null;
+
+        //封装获取时间的函数
+        Date.prototype.Format = function (fmt) {
+            //author: xjj
+            var o = {
+                "M+": this.getMonth() + 1, //月份
+                "d+": this.getDate(), //日
+                "h+": this.getHours(), //小时
+                "m+": this.getMinutes(), //分
+                "s+": this.getSeconds(), //秒
+                "q+": Math.floor((this.getMonth() + 3) / 3), //季度
+                "S": this.getMilliseconds() //毫秒
+            };
+            if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+            for (var k in o)
+                if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+            return fmt;
+        };
+
+        //封装创建Div并且发送消息的函数
+        const createChatDiv = (data) => {
+            let div = document.createElement('div');
+            let p_time = document.createElement('p');
+            let p_content = document.createElement('p');
+            switch (data.type) {
+                case 'serverInformation':
+                    p_time.innerHTML = new Date().Format("yyyy-MM-dd hh:mm:ss");
+                    p_content.innerHTML = data.message;
+                    break;
+                case 'chat':
+                    p_time.innerHTML = new Date().Format("yyyy-MM-dd hh:mm:ss");
+                    p_content.innerHTML = data.name + ":" + data.message;
+                    break;
+                default:
+                    break;
+            }
+
+            p_time.setAttribute('class', 'time');
+            p_content.setAttribute('class', 'content');
+
+            div.appendChild(p_time);
+            div.appendChild(p_content);
+
+            return div;
+        };
+
+        //封装发送消息的函数
+        const send = () => {
+            let message = document.getElementById('message');
+
+            //设置不能够发送空消息
+            if (!message.value) {
+                return;
+            }
+            let data = {
+                type: 'chat',
+                message: message.value
+            };
+            ws.send(JSON.stringify(data));
+            message.value = "";
+        };
+
+        let setName = document.getElementById('setName');
+        setName.onclick = () => {
+            let userName = document.getElementById('userName');
+            let nickName = "我没有起名字";
+            if (userName.value) {
+                nickName = userName.value;
+            }
+
+
+            //建立连接,并发送连接进入房间(并且连接会一直保存,进行服务端的轮询)
+            ws = new WebSocket('ws://127.0.0.1:3000');
+
+            //连接上来的时候
+            ws.onopen = () => {
+                let data = {
+                    type: 'setName',
+                    nickname: nickName
+                };
+                ws.send(JSON.stringify(data));
+            };
+
+            //发送消息的时候
+            document.getElementById('sendMessage').onclick = () => {
+                send();
+            };
+
+
+            //当接受服务端的请求的时候
+            ws.onmessage = (e) => {
+                let data = JSON.parse(e.data);
+                console.log(data);
+
+                //接受的消息为连接的人的个数的时候
+                if (data.type === 'chatterList') {
+                    let list = data.list;
+                    let length = list.length;
+                    let userList = document.getElementById('userList');
+                    document.getElementById('onLine').innerText = `在线人数${length}人`;
+
+                    for (let i = 0; i < list.length; i++) {
+                        let p_user = document.createElement('p');
+                        p_user.setAttribute('class', 'userList-item');
+                        p_user.innerText = list[i].name;
+                        userList.appendChild(p_user);
+                    }
+                }
+
+                //当为接受消息的或者用户进入新房间的时候
+                else {
+                    let oldContent = document.getElementById('content');
+                    oldContent.appendChild(createChatDiv(data));
+                }
+
+                //设置名字不能再改,以及不能改名字
+                setName.setAttribute('disabled', true);
+                let userName = document.getElementById('userName');
+                userName.setAttribute('disabled', true);
+                setName.style.display = "none";
+
+            };
+
+        }
+
+    </script>
+</body>
+
+</html>
