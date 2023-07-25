@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通讯socket</title>
+    <script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+</head>
+
+<body>
+    <input type="text" id="roomInp" placeholder="请先输入你要加入的房间id"><br>
+    <button onclick="joinRoomFn()">点击先加入房间, 才能开始聊天</button><br>
+
+    <input type="text" placeholder="请输入你的昵称" id="userInp"><br>
+    <input type="text" placeholder="请输入你的聊天信息" id="myInp"><br>
+    <button onclick="send()">点我发送消息</button><br>
+    <div id="result">
+
+    </div>
+    <script src="https://cdn.bootcss.com/socket.io/2.2.0/socket.io.js"></script>
+    <script>
+        //1 加入房间 连接即时通讯服务器 传入房间id
+        let socket;
+        function joinRoomFn() {
+            let theRoomId = $("#roomInp").val();
+            if (theRoomId == '') { alert('房间号不能为空！'); return; }
+            socket = io(`http://127.0.0.1:5500?roomid=${theRoomId}`);
+            socket.on("send_to_client", (arg) => {// 接收欢迎消息
+                alert(arg);
+            });
+            socket.on("client_message", (obj) => {
+                let { nickName, message } = obj;
+                let elStr = `<p>${nickName}说: ${message}</p>`;
+                $("#result").html($("#result").html() + elStr);
+            });
+        }
+        //2 发送消息
+        function send() {
+            if (socket === undefined) {
+                alert("请先连接房间");
+            } else {
+                socket.emit("news", {
+                    userName: $("#userInp").val(),
+                    msg: $("#myInp").val(),
+                    roomid: $("#roomInp").val()
+                });// 触发后台的news事件, 把值传给后台
+            }
+        }
+
+
+    </script>
+</body>
+
+</html>
