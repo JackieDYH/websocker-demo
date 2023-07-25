@@ -1,10 +1,10 @@
 /*
  * @Author: Jackie
  * @Date: 2023-07-21 15:35:11
- * @LastEditTime: 2023-07-21 16:09:24
+ * @LastEditTime: 2023-07-25 17:32:52
  * @LastEditors: Jackie
- * @Description: ws
- * @FilePath: /websocker-demo/server-test/server.js
+ * @Description: nodejs-websocket 🙅不行
+ * @FilePath: /websocker-demo/server/web05/server.js
  * @version:
  */
 const ws = require('nodejs-websocket');
